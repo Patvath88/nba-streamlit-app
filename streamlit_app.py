@@ -147,12 +147,22 @@ with tab1:
             vertical-align: middle;
             margin-left: 8px;
         }
+        .sportsbook-badge {
+            background: #00C896;
+            color: #002B5B;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 8px;
+            text-transform: capitalize;
+        }
         </style>
     """, unsafe_allow_html=True)
 
-    # Heading
+    # Title
     st.markdown(f"<div class='title'>🏀 Top Predictions for {datetime.now(EST).strftime('%m/%d/%Y')}</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Our Top Picks Curated For You to Cash Out!</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Best AI Monte Carlo picks with sportsbook logos & rankings</div>", unsafe_allow_html=True)
 
     # Fetch odds data
     games = fetch_live_odds()
@@ -220,12 +230,46 @@ with tab1:
             </div>
         """, unsafe_allow_html=True)
 
-    def safe_image(url, width):
+    # === Safe Image Handler ===
+    def safe_image(url, width, fallback_text="🏀", sportsbook_name=None):
+        """
+        Renders valid images safely; falls back to placeholders or sportsbook name badges.
+        """
+        if not url or str(url).strip() in ["", "0", "None"]:
+            if sportsbook_name:
+                st.markdown(
+                    f"<div class='sportsbook-badge'>{sportsbook_name}</div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    f"""
+                    <div style='width:{width}px;height:{width}px;
+                    display:flex;align-items:center;justify-content:center;
+                    background:#1C2541;color:#00FFAE;font-size:{width//2}px;
+                    border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.4);'>
+                    {fallback_text}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            return
         try:
             st.image(url, width=width)
-        except:
-            st.markdown(f"<div style='width:{width}px;height:{width}px;background:#1C2541;border-radius:8px;'></div>", unsafe_allow_html=True)
+        except Exception:
+            st.markdown(
+                f"""
+                <div style='width:{width}px;height:{width}px;
+                display:flex;align-items:center;justify-content:center;
+                background:#1C2541;color:#00FFAE;font-size:{width//2}px;
+                border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.4);'>
+                {fallback_text}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
+    # === Display Top Predictions ===
     def show_top(title, data, metric_label):
         st.markdown(f"<div class='category-title'>{title}</div>", unsafe_allow_html=True)
         for i, (home, away, pred, conf, *extra) in enumerate(sorted(data, key=lambda x: x[3], reverse=True)[:3], start=1):
@@ -238,8 +282,7 @@ with tab1:
             with col1:
                 rank_style = "gold-glow" if i == 1 else "color:#00C896;"
                 st.markdown(f"<h1 style='{rank_style}margin-top:10px;'>{i}</h1>", unsafe_allow_html=True)
-                if logo(team):
-                    safe_image(logo(team), 110)
+                safe_image(logo(team), 110, fallback_text="🏀")
                 if i == 1:
                     st.markdown("<div style='color:#FFD700;font-size:1.1em;font-weight:600;'>🔥 Pick of the Day</div>", unsafe_allow_html=True)
             with col2:
@@ -251,8 +294,7 @@ with tab1:
                 """, unsafe_allow_html=True)
                 st.markdown(progress_bar(conf), unsafe_allow_html=True)
             with col3:
-                if book_logo:
-                    safe_image(book_logo, 120)
+                safe_image(book_logo, 120, fallback_text="💰", sportsbook_name=sportsbook)
             st.markdown("<hr style='border:1px solid #1C2541;'>", unsafe_allow_html=True)
 
     show_top("🏆 Top 3 Moneyline Predictions", top_ml, "Odds")
