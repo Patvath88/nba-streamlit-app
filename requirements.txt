@@ -1,6 +1,6 @@
 streamlit
-xgboost
+requests
 numpy
 pandas
-requests
-scikit-learn
+pytz
+
