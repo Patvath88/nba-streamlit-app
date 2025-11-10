@@ -128,7 +128,7 @@ with tab1:
     }
     sportsbook_names = list(sportsbook_logos.keys())
 
-    # Run Monte Carlo predictions
+    # Fetch and simulate predictions
     for game in games:
         bookmaker = game["bookmakers"][0]
         home, away = game["home_team"], game["away_team"]
@@ -141,7 +141,7 @@ with tab1:
         home_odds, away_odds = h2h["outcomes"][0]["price"], h2h["outcomes"][1]["price"]
         spread, total = spreads["outcomes"][0]["point"], totals["outcomes"][0]["point"]
 
-        # Monte Carlo Simulation for Moneyline
+        # Run Monte Carlo Simulations
         home_prob = american_to_prob(home_odds)
         away_prob = american_to_prob(away_odds)
         draws = np.random.rand(N_SIM)
@@ -171,16 +171,17 @@ with tab1:
             book_logo = sportsbook_logos.get(sportsbook, "")
 
             # Card layout
-            col1, col2, col3 = st.columns([1, 2, 2])
+            col1, col2, col3 = st.columns([1, 3, 2])
             with col1:
                 rank_style = "gold-glow" if i == 1 else "color:#00C896;"
                 st.markdown(f"<h1 style='{rank_style}margin-top:10px;'>{i}</h1>", unsafe_allow_html=True)
                 if logo(team):
-                    safe_image(logo(team), 100)
+                    safe_image(logo(team), 110)
                 else:
-                    st.markdown(f"<div style='width:100px;height:100px;background:#1C2541;border-radius:12px;'></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='width:110px;height:110px;background:#1C2541;border-radius:12px;'></div>", unsafe_allow_html=True)
                 if i == 1:
                     st.markdown("<div style='color:#FFD700;font-size:1.1em;font-weight:600;'>🔥 Pick of the Day</div>", unsafe_allow_html=True)
+
             with col2:
                 st.markdown(f"""
                     <b style='font-size:1.3em;'>{team}</b><br>
@@ -189,14 +190,16 @@ with tab1:
                     <span style='font-size:0.9em;color:#9DAAF2;'>({sims_correct:,} out of {N_SIM:,} simulations)</span>
                 """, unsafe_allow_html=True)
                 st.markdown(progress_bar(conf), unsafe_allow_html=True)
+
             with col3:
                 if book_logo:
-                    safe_image(book_logo, 110)
+                    safe_image(book_logo, 120)
             st.markdown("<hr style='border:1px solid #1C2541;'>", unsafe_allow_html=True)
 
     show_top("🏆 Top 3 Moneyline Predictions", top_ml, "Odds")
     show_top("📈 Top 3 Spread Predictions", top_sp, "Spread")
     show_top("🔥 Top 3 Total (O/U) Predictions", top_tot, "Total")
+
 
 
 # ===================== TAB 2: LIVE PREDICTIONS =====================
