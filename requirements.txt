@@ -3,4 +3,4 @@ xgboost
 numpy
 pandas
 requests
-sklearn
+scikit-learn
