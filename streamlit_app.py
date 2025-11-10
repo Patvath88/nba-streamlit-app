@@ -30,13 +30,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================
-# --- MOCK FUNCTIONS (Replace these with your model) ---
+# --- MOCK FUNCTIONS (Replace these with your actual model logic) ---
 # ==========================
 
 def fetch_live_odds():
-    """Mock data for demonstration."""
+    """Mocked live odds data for demonstration purposes."""
     return [
-        {"home_team": "Detroit Pistons", "away_team": "Utah Jazz", 
+        {"home_team": "Detroit Pistons", "away_team": "Utah Jazz",
          "bookmakers": [{"markets": [
              {"key": "h2h", "outcomes": [{"price": -180}, {"price": 160}]},
              {"key": "spreads", "outcomes": [{"point": -6.5}]},
@@ -85,25 +85,19 @@ def progress_bar(conf):
 # --- SAFE IMAGE HANDLER ---
 # ==========================
 
-def safe_image(url, width, fallback_text="🏀", sportsbook_name=None):
-    """Displays a safe image with fallback placeholders."""
+def safe_image(url, width, fallback_text="🏀"):
+    """Displays safe team logos or fallback icons."""
     if not url or str(url).strip() in ["", "0", "None"]:
-        if sportsbook_name:
-            st.markdown(
-                f"<div style='background:#00C896;color:#002B5B;padding:6px 12px;border-radius:8px;font-weight:600;display:inline-block;margin-top:8px;text-transform:capitalize;'>{sportsbook_name}</div>",
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(
-                f"""
-                <div style='width:{width}px;height:{width}px;
-                display:flex;align-items:center;justify-content:center;
-                background:#1C2541;color:#00FFAE;font-size:{width//2}px;
-                border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.4);'>
-                {fallback_text}
-                </div>
-                """, unsafe_allow_html=True
-            )
+        st.markdown(
+            f"""
+            <div style='width:{width}px;height:{width}px;
+            display:flex;align-items:center;justify-content:center;
+            background:#1C2541;color:#00FFAE;font-size:{width//2}px;
+            border-radius:50%;box-shadow:0 0 10px rgba(0,0,0,0.4);'>
+            {fallback_text}
+            </div>
+            """, unsafe_allow_html=True
+        )
         return
     try:
         st.image(url, width=width)
@@ -131,17 +125,9 @@ tab1, tab2, tab3, tab4 = st.tabs(["🏀 Top Predictions", "📊 Daily NBA Predic
 
 with tab1:
     st.markdown(f"<div class='title'>🏀 Top Predictions for {datetime.now(EST).strftime('%m/%d/%Y')}</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Best AI Monte Carlo picks with sportsbook logos & rankings</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Best AI Monte Carlo picks with confidence ratings</div>", unsafe_allow_html=True)
 
     games = fetch_live_odds()
-    sportsbook_logos = {
-        "fanduel": "https://upload.wikimedia.org/wikipedia/commons/2/27/FanDuel_logo.svg",
-        "draftkings": "https://upload.wikimedia.org/wikipedia/commons/a/ae/DraftKings_logo.svg",
-        "mgm": "https://upload.wikimedia.org/wikipedia/en/e/e0/BetMGM_logo.svg",
-        "caesars": "https://upload.wikimedia.org/wikipedia/commons/8/87/Caesars_Sportsbook_logo.svg",
-    }
-    sportsbook_names = list(sportsbook_logos.keys())
-
     top_ml, top_sp, top_tot = [], [], []
 
     for game in games:
@@ -166,18 +152,15 @@ with tab1:
         sp_pred, sp_conf = monte_carlo_spread(spread)
         tot_pred, tot_conf = monte_carlo_total(total)
 
-        top_ml.append((home, away, ml_pred, ml_conf, home_odds, away_odds, random.choice(sportsbook_names)))
-        top_sp.append((home, away, sp_pred, sp_conf, spread, random.choice(sportsbook_names)))
-        top_tot.append((home, away, tot_pred, tot_conf, total, random.choice(sportsbook_names)))
+        top_ml.append((home, away, ml_pred, ml_conf, home_odds, away_odds))
+        top_sp.append((home, away, sp_pred, sp_conf, spread))
+        top_tot.append((home, away, tot_pred, tot_conf, total))
 
     def show_top(title, data, metric_label):
         st.markdown(f"<div class='category-title'>{title}</div>", unsafe_allow_html=True)
         for i, (home, away, pred, conf, *extra) in enumerate(sorted(data, key=lambda x: x[3], reverse=True)[:3], start=1):
             team = home if pred == "Home" else away
-            sportsbook = extra[-1]
-            book_logo = sportsbook_logos.get(sportsbook, "")
-
-            col1, col2, col3 = st.columns([1, 3, 2])
+            col1, col2 = st.columns([1, 4])
             with col1:
                 rank_style = "gold-glow" if i == 1 else "color:#00C896;"
                 st.markdown(f"<h1 style='{rank_style}'>{i}</h1>", unsafe_allow_html=True)
@@ -189,8 +172,6 @@ with tab1:
                     <b style='color:#00FFAE;'>Confidence: {conf}%</b><br>
                 """, unsafe_allow_html=True)
                 st.markdown(progress_bar(conf), unsafe_allow_html=True)
-            with col3:
-                safe_image(book_logo, 120, fallback_text="💰", sportsbook_name=sportsbook)
             st.markdown("<hr style='border:1px solid #1C2541;'>", unsafe_allow_html=True)
 
     show_top("🏆 Top 3 Moneyline Predictions", top_ml, "Odds")
