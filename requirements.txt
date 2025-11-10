@@ -1,6 +1,25 @@
+# Core
 streamlit
 pandas
 numpy
 requests
+python-dateutil
+
+# NBA data
 nba_api
+
+# Visualization
 plotly
+altair
+matplotlib
+
+# Machine Learning / Simulation
+scikit-learn
+scipy
+
+# Performance + Caching
+lxml
+tqdm
+
+# Optional for hosted dashboards and layout enhancements
+streamlit-extras
