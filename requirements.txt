@@ -3,4 +3,4 @@ requests
 numpy
 pandas
 pytz
-
+nba_api
