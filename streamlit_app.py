@@ -114,9 +114,47 @@ tab1, tab2, tab3, tab4 = st.tabs(["🏠 Top Predictions", "🎯 Daily NBA Predic
 
 # ===================== TAB 1: TOP PREDICTIONS =====================
 with tab1:
-    st.markdown(f"<div class='title'>🏀 Top Predictions for {datetime.now(EST).strftime('%m/%d/%Y')}</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'> Our Top 3 Picks for the day for Moneylines, Spreads, O/U Totals </div>", unsafe_allow_html=True)
+    # === AI Prediction Summary Banner ===
+    st.markdown("""
+        <style>
+        .summary-banner {
+            background: linear-gradient(90deg, #004AAD, #002B5B);
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.4);
+        }
+        .summary-item {
+            display: inline-block;
+            margin: 0 40px;
+            font-size: 1.2em;
+            text-align: center;
+        }
+        .summary-item h3 {
+            font-size: 2.3em;
+            color: #00FFAE;
+            margin: 5px 0;
+        }
+        .summary-item p {
+            font-size: 1.1em;
+            color: #BFD7ED;
+            margin: 0;
+        }
+        .summary-logo {
+            width: 45px;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
+    # Heading
+    st.markdown(f"<div class='title'>🏀 Top Predictions for {datetime.now(EST).strftime('%m/%d/%Y')}</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Best AI Monte Carlo picks with sportsbook logos & rankings</div>", unsafe_allow_html=True)
+
+    # Fetch odds data
     games = fetch_live_odds()
     top_ml, top_sp, top_tot = [], [], []
 
@@ -128,7 +166,7 @@ with tab1:
     }
     sportsbook_names = list(sportsbook_logos.keys())
 
-    # Fetch and simulate predictions
+    # Run Monte Carlo predictions
     for game in games:
         bookmaker = game["bookmakers"][0]
         home, away = game["home_team"], game["away_team"]
@@ -141,7 +179,7 @@ with tab1:
         home_odds, away_odds = h2h["outcomes"][0]["price"], h2h["outcomes"][1]["price"]
         spread, total = spreads["outcomes"][0]["point"], totals["outcomes"][0]["point"]
 
-        # Run Monte Carlo Simulations
+        # Monte Carlo Simulation for Moneyline
         home_prob = american_to_prob(home_odds)
         away_prob = american_to_prob(away_odds)
         draws = np.random.rand(N_SIM)
@@ -155,6 +193,32 @@ with tab1:
         top_ml.append((home, away, ml_pred, ml_conf, home_odds, away_odds, random.choice(sportsbook_names), home_wins))
         top_sp.append((home, away, sp_pred, sp_conf, spread, random.choice(sportsbook_names), int(N_SIM * sp_conf / 100)))
         top_tot.append((home, away, tot_pred, tot_conf, total, random.choice(sportsbook_names), int(N_SIM * tot_conf / 100)))
+
+    # === Summary Data ===
+    total_games = len(games)
+    avg_conf = round(np.mean([x[3] for x in top_ml + top_sp + top_tot]) if (top_ml or top_sp or top_tot) else 0, 2)
+    best_overall = max(top_ml + top_sp + top_tot, key=lambda x: x[3]) if (top_ml or top_sp or top_tot) else None
+
+    if best_overall:
+        best_team = best_overall[0] if best_overall[2] == "Home" else best_overall[1]
+        best_conf = best_overall[3]
+        best_logo = logo(best_team)
+        st.markdown(f"""
+            <div class='summary-banner'>
+                <div class='summary-item'>
+                    <h3>{total_games}</h3>
+                    <p>Games Predicted</p>
+                </div>
+                <div class='summary-item'>
+                    <h3>{avg_conf}%</h3>
+                    <p>Average Confidence</p>
+                </div>
+                <div class='summary-item'>
+                    <h3>{best_team} <img src='{best_logo}' class='summary-logo'></h3>
+                    <p>Top Pick ({best_conf}% Confidence)</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
     def safe_image(url, width):
         try:
@@ -170,18 +234,14 @@ with tab1:
             sims_correct = extra[-1]
             book_logo = sportsbook_logos.get(sportsbook, "")
 
-            # Card layout
             col1, col2, col3 = st.columns([1, 3, 2])
             with col1:
                 rank_style = "gold-glow" if i == 1 else "color:#00C896;"
                 st.markdown(f"<h1 style='{rank_style}margin-top:10px;'>{i}</h1>", unsafe_allow_html=True)
                 if logo(team):
                     safe_image(logo(team), 110)
-                else:
-                    st.markdown(f"<div style='width:110px;height:110px;background:#1C2541;border-radius:12px;'></div>", unsafe_allow_html=True)
                 if i == 1:
                     st.markdown("<div style='color:#FFD700;font-size:1.1em;font-weight:600;'>🔥 Pick of the Day</div>", unsafe_allow_html=True)
-
             with col2:
                 st.markdown(f"""
                     <b style='font-size:1.3em;'>{team}</b><br>
@@ -190,7 +250,6 @@ with tab1:
                     <span style='font-size:0.9em;color:#9DAAF2;'>({sims_correct:,} out of {N_SIM:,} simulations)</span>
                 """, unsafe_allow_html=True)
                 st.markdown(progress_bar(conf), unsafe_allow_html=True)
-
             with col3:
                 if book_logo:
                     safe_image(book_logo, 120)
