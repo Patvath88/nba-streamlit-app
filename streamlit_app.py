@@ -6,14 +6,17 @@ from datetime import datetime, timedelta
 import pytz
 import random
 
+# ====================================
+# Streamlit Page Setup
+# ====================================
 st.set_page_config(page_title="🏀 NBA AI Prediction Dashboard", layout="wide")
 
-# =======================
-# Utility & Config
-# =======================
 EST = pytz.timezone("US/Eastern")
 N_SIM = 1_000_000
 
+# ====================================
+# Team Logos (safe fallback)
+# ====================================
 TEAM_LOGOS = {
     "Boston Celtics": "https://cdn.nba.com/logos/nba/1610612738/primary/L/logo.svg",
     "New York Knicks": "https://cdn.nba.com/logos/nba/1610612752/primary/L/logo.svg",
@@ -25,6 +28,9 @@ TEAM_LOGOS = {
     "Phoenix Suns": "https://cdn.nba.com/logos/nba/1610612756/primary/L/logo.svg",
 }
 
+# ====================================
+# Helper Functions
+# ====================================
 def safe_image(url, width=80):
     try:
         st.image(url, width=width)
@@ -39,9 +45,9 @@ def confidence_bar(conf):
     </div>
     """
 
-# =======================
-# Simulation & Mock Data
-# =======================
+# ====================================
+# Simulation Logic
+# ====================================
 def run_monte_carlo_prediction(home_odds, away_odds):
     home_prob = 1 / (1 + np.exp(-home_odds/100))
     draws = np.random.rand(N_SIM)
@@ -54,25 +60,41 @@ def monte_carlo_prop(line):
     conf = round(random.uniform(50, 70), 2)
     return result, conf
 
+# ====================================
+# Fetch Games
+# ====================================
 def fetch_today_games():
     url = "https://cdn.nba.com/static/json/staticData/scheduleLeagueV2_1.json"
     data = requests.get(url).json()
     games = []
-    today = datetime.now(EST).strftime("%Y-%m-%d")
+    
+    now_est = datetime.now(EST)
+    today = now_est.date()
+    tomorrow = today + timedelta(days=1)
 
     for day in data["leagueSchedule"]["gameDates"]:
-        if day["gameDate"] == today:
+        game_date = datetime.strptime(day["gameDate"], "%Y-%m-%d").date()
+        if game_date in [today, tomorrow]:
             for game in day["games"]:
-                games.append({
-                    "home": game["homeTeam"]["teamName"],
-                    "away": game["awayTeam"]["teamName"],
-                    "gameTime": datetime.strptime(game["gameDateTimeEst"], "%Y-%m-%dT%H:%M:%S.%fZ")
-                                .replace(tzinfo=pytz.utc).astimezone(EST).strftime("%I:%M %p"),
-                    "spread": round(random.uniform(-12, 12), 1),
-                    "total": round(random.uniform(210, 240), 1)
-                })
+                # Convert UTC -> EST time
+                game_time = datetime.strptime(game["gameDateTimeUTC"], "%Y-%m-%dT%H:%M:%SZ").replace(
+                    tzinfo=pytz.utc).astimezone(EST)
+                
+                # Filter out games that already ended
+                if game_time > now_est:
+                    games.append({
+                        "home": game["homeTeam"]["teamName"],
+                        "away": game["awayTeam"]["teamName"],
+                        "gameTime": game_time.strftime("%I:%M %p"),
+                        "spread": round(random.uniform(-12, 12), 1),
+                        "total": round(random.uniform(210, 240), 1),
+                        "isTomorrow": (game_date == tomorrow)
+                    })
     return games
 
+# ====================================
+# Generate Mock Player Props
+# ====================================
 def fetch_player_props(game):
     props = ["Points", "Rebounds", "Assists", "3PT Made", "Steals+Blocks"]
     results = []
@@ -87,16 +109,21 @@ def fetch_player_props(game):
         })
     return results
 
-# =======================
-# Streamlit UI
-# =======================
+# ====================================
+# Streamlit Layout
+# ====================================
 st.title("🏀 NBA AI Prediction Dashboard")
 st.caption("Monte Carlo Simulations (1,000,000 runs) — Updated daily for all NBA games")
 
 games = fetch_today_games()
 
+if games and any(g["isTomorrow"] for g in games):
+    st.subheader("📅 Showing Tomorrow’s NBA Games (EST)")
+else:
+    st.subheader("🏀 Today’s NBA Matchups (EST)")
+
 if not games:
-    st.warning("No NBA games found for today. Please check back later.")
+    st.warning("No NBA games found for today or tomorrow. Please check back later.")
 else:
     for g in games:
         home, away = g["home"], g["away"]
@@ -133,4 +160,3 @@ else:
             st.markdown(f"**{p['prop']} — {p['prediction']} {p['line']} ({p['confidence']}%)**")
             st.markdown(confidence_bar(p['confidence']), unsafe_allow_html=True)
         st.markdown("")
-
