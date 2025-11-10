@@ -110,7 +110,7 @@ def progress_bar(confidence):
 # --------------------------
 # TABS
 # --------------------------
-tab1, tab2, tab3, tab4 = st.tabs(["🏠 Top Predictions", "🎯 Live Predictions", "📊 Prediction History", "✅ Recent Wins"])
+tab1, tab2, tab3, tab4 = st.tabs(["🏠 Top Predictions", "🎯 Daily NBA Predictions", "📊 Prediction History", "✅ Recent Wins"])
 
 # ===================== TAB 1: TOP PREDICTIONS =====================
 with tab1:
@@ -201,7 +201,7 @@ with tab1:
 
 # ===================== TAB 2: LIVE PREDICTIONS =====================
 with tab2:
-    st.markdown("<div class='title'>🎯 Live Monte Carlo Predictions</div>", unsafe_allow_html=True)
+    st.markdown("<div class='title'>🎯 Daily NBA Predictions</div>", unsafe_allow_html=True)
     st.markdown("<div class='subtext'>Simulated 1,000,000x to project outcomes</div>", unsafe_allow_html=True)
     games = fetch_live_odds()
 
