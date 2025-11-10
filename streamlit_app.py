@@ -10,7 +10,7 @@ import random
 # --------------------------
 # CONFIG
 # --------------------------
-st.set_page_config(page_title="🏀 NBA Monte Carlo AI Dashboard", layout="wide")
+st.set_page_config(page_title="🏀 Pat's Picks Premiumim NBA Dashboard", layout="wide")
 ODDS_API_KEY = "e11d4159145383afd3a188f99489969e"
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DATA_FILE = "predictions.csv"
@@ -115,7 +115,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["🏠 Top Predictions", "🎯 Daily NBA Predic
 # ===================== TAB 1: TOP PREDICTIONS =====================
 with tab1:
     st.markdown(f"<div class='title'>🏀 Top Predictions for {datetime.now(EST).strftime('%m/%d/%Y')}</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Best AI Monte Carlo picks with sportsbook logos & rankings</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'> Our Top 3 Picks for the day for Moneylines, Spreads, O/U Totals </div>", unsafe_allow_html=True)
 
     games = fetch_live_odds()
     top_ml, top_sp, top_tot = [], [], []
