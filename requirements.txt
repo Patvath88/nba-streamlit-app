@@ -1,25 +1,50 @@
-# Core
+# --------------------------------------------------
+# CORE DEPENDENCIES
+# --------------------------------------------------
 streamlit
 pandas
 numpy
 requests
 python-dateutil
 
-# NBA data
+# --------------------------------------------------
+# NBA + SPORTS DATA
+# --------------------------------------------------
 nba_api
+sportsipy
+oddsapi
 
-# Visualization
+# --------------------------------------------------
+# MACHINE LEARNING + AI
+# --------------------------------------------------
+scikit-learn
+scipy
+xgboost
+lightgbm
+
+# --------------------------------------------------
+# VISUALIZATION + DASHBOARDING
+# --------------------------------------------------
 plotly
 altair
 matplotlib
-
-# Machine Learning / Simulation
-scikit-learn
-scipy
-
-# Performance + Caching
-lxml
-tqdm
-
-# Optional for hosted dashboards and layout enhancements
+seaborn
+pandas-profiling
 streamlit-extras
+streamlit-option-menu
+streamlit-aggrid
+
+# --------------------------------------------------
+# PERFORMANCE + UTILITY
+# --------------------------------------------------
+tqdm
+lxml
+pytz
+joblib
+cachetools
+
+# --------------------------------------------------
+# ADVANCED ANALYSIS (OPTIONAL)
+# --------------------------------------------------
+statsmodels
+prophet
