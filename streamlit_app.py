@@ -121,56 +121,83 @@ with tab1:
     top_ml, top_sp, top_tot = [], [], []
 
     sportsbook_logos = {
-        "fanduel": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/FanDuel_logo.svg/512px-FanDuel_logo.svg.png",
-        "draftkings": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/DraftKings_logo.svg/512px-DraftKings_logo.svg.png",
-        "mgm": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/BetMGM_logo.svg/512px-BetMGM_logo.svg.png",
-        "caesars": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Caesars_Sportsbook_logo.svg/512px-Caesars_Sportsbook_logo.svg.png",
+        "fanduel": "https://upload.wikimedia.org/wikipedia/commons/2/27/FanDuel_logo.svg",
+        "draftkings": "https://upload.wikimedia.org/wikipedia/commons/a/ae/DraftKings_logo.svg",
+        "mgm": "https://upload.wikimedia.org/wikipedia/en/e/e0/BetMGM_logo.svg",
+        "caesars": "https://upload.wikimedia.org/wikipedia/commons/8/87/Caesars_Sportsbook_logo.svg",
     }
     sportsbook_names = list(sportsbook_logos.keys())
 
+    # Fetch and simulate predictions
     for game in games:
         bookmaker = game["bookmakers"][0]
         home, away = game["home_team"], game["away_team"]
         h2h = next((m for m in bookmaker["markets"] if m["key"] == "h2h"), None)
         spreads = next((m for m in bookmaker["markets"] if m["key"] == "spreads"), None)
         totals = next((m for m in bookmaker["markets"] if m["key"] == "totals"), None)
-        if not h2h or not spreads or not totals: continue
+        if not h2h or not spreads or not totals: 
+            continue
 
         home_odds, away_odds = h2h["outcomes"][0]["price"], h2h["outcomes"][1]["price"]
         spread, total = spreads["outcomes"][0]["point"], totals["outcomes"][0]["point"]
-        ml_pred, ml_conf = monte_carlo_moneyline(home_odds, away_odds)
+
+        # Run Monte Carlo Simulations
+        home_prob = american_to_prob(home_odds)
+        away_prob = american_to_prob(away_odds)
+        draws = np.random.rand(N_SIM)
+        home_wins = np.sum(draws < home_prob / (home_prob + away_prob))
+        ml_conf = round((home_wins / N_SIM) * 100, 2)
+        ml_pred = "Home" if ml_conf >= 50 else "Away"
+
         sp_pred, sp_conf = monte_carlo_spread(spread)
         tot_pred, tot_conf = monte_carlo_total(total)
 
-        top_ml.append((home, away, ml_pred, ml_conf, home_odds, away_odds, random.choice(sportsbook_names)))
-        top_sp.append((home, away, sp_pred, sp_conf, spread, random.choice(sportsbook_names)))
-        top_tot.append((home, away, tot_pred, tot_conf, total, random.choice(sportsbook_names)))
+        top_ml.append((home, away, ml_pred, ml_conf, home_odds, away_odds, random.choice(sportsbook_names), home_wins))
+        top_sp.append((home, away, sp_pred, sp_conf, spread, random.choice(sportsbook_names), int(N_SIM * sp_conf / 100)))
+        top_tot.append((home, away, tot_pred, tot_conf, total, random.choice(sportsbook_names), int(N_SIM * tot_conf / 100)))
+
+    def safe_image(url, width):
+        try:
+            st.image(url, width=width)
+        except:
+            st.markdown(f"<div style='width:{width}px;height:{width}px;background:#222;border-radius:8px;'></div>", unsafe_allow_html=True)
 
     def show_top(title, data, metric_label):
         st.markdown(f"<div class='category-title'>{title}</div>", unsafe_allow_html=True)
         for i, (home, away, pred, conf, *extra) in enumerate(sorted(data, key=lambda x: x[3], reverse=True)[:3], start=1):
             team = home if pred == "Home" else away
-            sportsbook = extra[-1]
-            book_logo = sportsbook_logos[sportsbook]
+            sportsbook = extra[-2]
+            sims_correct = extra[-1]
+            book_logo = sportsbook_logos.get(sportsbook, "")
+            
+            # Card layout
             col1, col2, col3, col4 = st.columns([1, 2, 1, 2])
             with col1:
                 rank_style = "gold-glow" if i == 1 else "color:#00C896;"
                 st.markdown(f"<h1 style='{rank_style}margin-top:10px;'>{i}</h1>", unsafe_allow_html=True)
-                st.image(logo(team), width=100)
+                if logo(team):
+                    safe_image(logo(team), 90)
+                else:
+                    st.markdown(f"<div style='width:90px;height:90px;background:#1C2541;border-radius:12px;'></div>", unsafe_allow_html=True)
             with col2:
-                st.image(player_img(team), width=150)
+                safe_image(player_img(team), 130)
             with col3:
-                st.image(book_logo, width=100)
+                if book_logo:
+                    safe_image(book_logo, 90)
             with col4:
-                st.markdown(f"<b style='font-size:1.3em;'>{team}</b><br>"
-                            f"<span style='color:#9DAAF2'>{metric_label}: {extra[0]}</span><br>"
-                            f"<b style='color:#00FFAE;'>Confidence: {conf}%</b>", unsafe_allow_html=True)
+                st.markdown(f"""
+                    <b style='font-size:1.3em;'>{team}</b><br>
+                    <span style='color:#9DAAF2'>{metric_label}: {extra[0]}</span><br>
+                    <b style='color:#00FFAE;'>Confidence: {conf}%</b><br>
+                    <span style='font-size:0.9em;color:#9DAAF2;'>({sims_correct:,} out of {N_SIM:,} simulations)</span>
+                """, unsafe_allow_html=True)
                 st.markdown(progress_bar(conf), unsafe_allow_html=True)
             st.markdown("<hr style='border:1px solid #1C2541;'>", unsafe_allow_html=True)
 
     show_top("🏆 Top 3 Moneyline Predictions", top_ml, "Odds")
     show_top("📈 Top 3 Spread Predictions", top_sp, "Spread")
     show_top("🔥 Top 3 Total (O/U) Predictions", top_tot, "Total")
+
 
 # ===================== TAB 2: LIVE PREDICTIONS =====================
 with tab2:
