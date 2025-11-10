@@ -381,7 +381,7 @@ correct_sp = np.sum(df["spread_result"] == "win") if "spread_result" in df.colum
 correct_tot = np.sum(df["total_result"] == "win") if "total_result" in df.columns else 0
 total_ml = len(df)
 
-        total_ml = len(df)
+    total_ml = len(df)
         win_pct_ml = round((correct_ml / total_ml) * 100, 2) if total_ml else 0
         win_pct_sp = round((correct_sp / total_ml) * 100, 2) if total_ml else 0
         win_pct_tot = round((correct_tot / total_ml) * 100, 2) if total_ml else 0
