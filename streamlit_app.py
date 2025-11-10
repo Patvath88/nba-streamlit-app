@@ -369,9 +369,18 @@ with tab4:
 
     if os.path.exists(DATA_FILE):
         df = pd.read_csv(DATA_FILE)
-        correct_ml = np.sum(df["moneyline_result"] == "win")
-        correct_sp = np.sum(df["spread_result"] == "win")
-        correct_tot = np.sum(df["total_result"] == "win")
+       # === Fix for missing prediction result columns ===
+expected_cols = ["moneyline_result", "spread_result", "total_result"]
+for col in expected_cols:
+    if col not in df.columns:
+        df[col] = None  # add missing columns to prevent KeyError
+
+# Safely calculate recent win statistics
+correct_ml = np.sum(df["moneyline_result"] == "win") if "moneyline_result" in df.columns else 0
+correct_sp = np.sum(df["spread_result"] == "win") if "spread_result" in df.columns else 0
+correct_tot = np.sum(df["total_result"] == "win") if "total_result" in df.columns else 0
+total_ml = len(df)
+
         total_ml = len(df)
         win_pct_ml = round((correct_ml / total_ml) * 100, 2) if total_ml else 0
         win_pct_sp = round((correct_sp / total_ml) * 100, 2) if total_ml else 0
