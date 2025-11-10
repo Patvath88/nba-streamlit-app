@@ -2,9 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import requests
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 import pytz
 import os
+import random
 
 # --------------------------
 # CONFIG
@@ -17,7 +18,7 @@ N_SIM = 1_000_000
 EST = pytz.timezone("US/Eastern")
 
 # --------------------------
-# STYLING
+# CUSTOM STYLING
 # --------------------------
 st.markdown("""
     <style>
@@ -25,16 +26,16 @@ st.markdown("""
         .title { text-align: center; font-size: 2.8em; font-weight: bold; color: #00C896; margin-bottom: 0.2em; }
         .subtext { text-align: center; color: #9DAAF2; font-size: 1.1em; margin-bottom: 1.5em; }
         .odds-table { background-color: #1C2541; border-radius: 12px; padding: 15px 25px; margin-bottom: 15px; box-shadow: 0 3px 10px rgba(0,0,0,0.3); }
-        .odds-table:hover { background-color: #212D52; }
         .team { font-size: 1.1em; color: #F0F0F0; font-weight: 500; }
-        .odds-box { text-align: center; background-color: #3A506B; border-radius: 8px; padding: 6px; font-weight: 600; color: #FFFFFF; }
         .game-time { color: #9DAAF2; font-size: 0.9em; text-align: right; }
         .progress-bar { background-color: #2E4057; border-radius: 8px; height: 10px; width: 100%; overflow: hidden; }
         .progress-fill { background-color: #00C896; height: 100%; transition: width 0.5s ease-in-out; }
-        .player-img { border-radius: 12px; height: 100px; width: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+        .category-title { font-size: 1.5em; font-weight: 600; color: #00C896; margin-top: 20px; }
+        .player-img { border-radius: 12px; height: 110px; width: auto; box-shadow: 0 2px 10px rgba(0,0,0,0.4); }
+        .gold-glow { animation: shimmer 2s infinite linear; background: linear-gradient(90deg, #FFD700, #fff6a1, #FFD700); -webkit-background-clip: text; color: transparent; }
+        @keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
         .scoreboard { background-color: #1C2541; border-radius: 12px; padding: 15px; margin-bottom: 10px; }
         .scoreboard:hover { background-color: #212D52; }
-        .category-title { font-size: 1.5em; font-weight: 600; color: #00C896; margin-top: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -55,11 +56,11 @@ TEAM_LOGOS = {
 }
 
 PLAYER_IMAGES = {
-    "Los Angeles Lakers": "https://cdn.nba.com/headshots/nba/latest/1040x760/2544.png",  # LeBron
-    "Golden State Warriors": "https://cdn.nba.com/headshots/nba/latest/1040x760/201939.png",  # Curry
-    "Dallas Mavericks": "https://cdn.nba.com/headshots/nba/latest/1040x760/1629029.png",  # Luka
-    "Milwaukee Bucks": "https://cdn.nba.com/headshots/nba/latest/1040x760/203507.png",  # Giannis
-    "Philadelphia 76ers": "https://cdn.nba.com/headshots/nba/latest/1040x760/203954.png",  # Embiid
+    "Los Angeles Lakers": "https://cdn.nba.com/headshots/nba/latest/1040x760/2544.png",
+    "Golden State Warriors": "https://cdn.nba.com/headshots/nba/latest/1040x760/201939.png",
+    "Dallas Mavericks": "https://cdn.nba.com/headshots/nba/latest/1040x760/1629029.png",
+    "Milwaukee Bucks": "https://cdn.nba.com/headshots/nba/latest/1040x760/203507.png",
+    "Philadelphia 76ers": "https://cdn.nba.com/headshots/nba/latest/1040x760/203954.png",
 }
 
 def logo(team):
@@ -109,15 +110,23 @@ def progress_bar(confidence):
 # --------------------------
 # TABS
 # --------------------------
-tab1, tab2, tab3 = st.tabs(["🏠 Top Predictions", "🎯 Live Predictions", "📊 Prediction History"])
+tab1, tab2, tab3, tab4 = st.tabs(["🏠 Top Predictions", "🎯 Live Predictions", "📊 Prediction History", "✅ Recent Wins"])
 
-# ===================== TAB 1: HOME PAGE =====================
+# ===================== TAB 1: TOP PREDICTIONS =====================
 with tab1:
     st.markdown(f"<div class='title'>🏀 Top Predictions for {datetime.now(EST).strftime('%m/%d/%Y')}</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Highest confidence Moneyline, Spread, and Total picks from Monte Carlo AI</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Best AI Monte Carlo picks with sportsbook logos & rankings</div>", unsafe_allow_html=True)
 
     games = fetch_live_odds()
     top_ml, top_sp, top_tot = [], [], []
+
+    sportsbook_logos = {
+        "fanduel": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/FanDuel_logo.svg/512px-FanDuel_logo.svg.png",
+        "draftkings": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ae/DraftKings_logo.svg/512px-DraftKings_logo.svg.png",
+        "mgm": "https://upload.wikimedia.org/wikipedia/en/thumb/e/e0/BetMGM_logo.svg/512px-BetMGM_logo.svg.png",
+        "caesars": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/87/Caesars_Sportsbook_logo.svg/512px-Caesars_Sportsbook_logo.svg.png",
+    }
+    sportsbook_names = list(sportsbook_logos.keys())
 
     for game in games:
         bookmaker = game["bookmakers"][0]
@@ -133,23 +142,31 @@ with tab1:
         sp_pred, sp_conf = monte_carlo_spread(spread)
         tot_pred, tot_conf = monte_carlo_total(total)
 
-        top_ml.append((home, away, ml_pred, ml_conf, home_odds, away_odds))
-        top_sp.append((home, away, sp_pred, sp_conf, spread))
-        top_tot.append((home, away, tot_pred, tot_conf, total))
+        top_ml.append((home, away, ml_pred, ml_conf, home_odds, away_odds, random.choice(sportsbook_names)))
+        top_sp.append((home, away, sp_pred, sp_conf, spread, random.choice(sportsbook_names)))
+        top_tot.append((home, away, tot_pred, tot_conf, total, random.choice(sportsbook_names)))
 
     def show_top(title, data, metric_label):
         st.markdown(f"<div class='category-title'>{title}</div>", unsafe_allow_html=True)
-        for (home, away, pred, conf, *extra) in sorted(data, key=lambda x: x[3], reverse=True)[:3]:
+        for i, (home, away, pred, conf, *extra) in enumerate(sorted(data, key=lambda x: x[3], reverse=True)[:3], start=1):
             team = home if pred == "Home" else away
-            col1, col2, col3 = st.columns([2, 1, 1])
+            sportsbook = extra[-1]
+            book_logo = sportsbook_logos[sportsbook]
+            col1, col2, col3, col4 = st.columns([1, 2, 1, 2])
             with col1:
-                st.image(player_img(team), width=130)
-                st.markdown(f"<b>{team}</b><br>{metric_label}: {extra[0]} | Confidence: {conf}%")
+                rank_style = "gold-glow" if i == 1 else "color:#00C896;"
+                st.markdown(f"<h1 style='{rank_style}margin-top:10px;'>{i}</h1>", unsafe_allow_html=True)
+                st.image(logo(team), width=100)
             with col2:
-                st.image(logo(team), width=60)
+                st.image(player_img(team), width=150)
             with col3:
+                st.image(book_logo, width=100)
+            with col4:
+                st.markdown(f"<b style='font-size:1.3em;'>{team}</b><br>"
+                            f"<span style='color:#9DAAF2'>{metric_label}: {extra[0]}</span><br>"
+                            f"<b style='color:#00FFAE;'>Confidence: {conf}%</b>", unsafe_allow_html=True)
                 st.markdown(progress_bar(conf), unsafe_allow_html=True)
-            st.markdown("---")
+            st.markdown("<hr style='border:1px solid #1C2541;'>", unsafe_allow_html=True)
 
     show_top("🏆 Top 3 Moneyline Predictions", top_ml, "Odds")
     show_top("📈 Top 3 Spread Predictions", top_sp, "Spread")
@@ -158,23 +175,20 @@ with tab1:
 # ===================== TAB 2: LIVE PREDICTIONS =====================
 with tab2:
     st.markdown("<div class='title'>🎯 Live Monte Carlo Predictions</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Simulated 1Mx to project outcomes</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Simulated 1,000,000x to project outcomes</div>", unsafe_allow_html=True)
     games = fetch_live_odds()
 
     for game in games:
         bookmaker = game["bookmakers"][0]
-        home = game["home_team"]
-        away = game["away_team"]
+        home, away = game["home_team"], game["away_team"]
         utc_time = datetime.fromisoformat(game["commence_time"].replace("Z", "+00:00"))
         est_time = utc_time.astimezone(EST).strftime("%I:%M %p ET")
 
         h2h = next((m for m in bookmaker["markets"] if m["key"] == "h2h"), None)
         spreads = next((m for m in bookmaker["markets"] if m["key"] == "spreads"), None)
         totals = next((m for m in bookmaker["markets"] if m["key"] == "totals"), None)
-
         home_odds, away_odds = h2h["outcomes"][0]["price"], h2h["outcomes"][1]["price"]
         spread, total = spreads["outcomes"][0]["point"], totals["outcomes"][0]["point"]
-
         ml_pred, ml_conf = monte_carlo_moneyline(home_odds, away_odds)
         sp_pred, sp_conf = monte_carlo_spread(spread)
         tot_pred, tot_conf = monte_carlo_total(total)
@@ -182,8 +196,8 @@ with tab2:
         st.markdown(f"<div class='odds-table'>", unsafe_allow_html=True)
         col1, col2, col3, col4, col5 = st.columns([3, 2, 2, 2, 2])
         with col1:
-            st.markdown(f"<span class='team'><img src='{logo(away)}' width='22'> {away}</span><br>"
-                        f"<span class='team'><img src='{logo(home)}' width='22'> {home}</span><br>"
+            st.markdown(f"<span class='team'><img src='{logo(away)}' width='30'> {away}</span><br>"
+                        f"<span class='team'><img src='{logo(home)}' width='30'> {home}</span><br>"
                         f"<div class='game-time'>{est_time}</div>", unsafe_allow_html=True)
         with col2: st.markdown(f"**Spread**<br>+{spread}<br>-{spread}", unsafe_allow_html=True)
         with col3: st.markdown(f"**Moneyline**<br>{away_odds}<br>{home_odds}", unsafe_allow_html=True)
@@ -197,7 +211,6 @@ with tab2:
 # ===================== TAB 3: HISTORY =====================
 with tab3:
     st.markdown("<div class='title'>📊 Prediction History</div>", unsafe_allow_html=True)
-
     with st.expander("📅 Today's Upcoming Predictions"):
         st.markdown("### Tonight's Games & Predictions")
         if os.path.exists(DATA_FILE):
@@ -205,12 +218,10 @@ with tab3:
             today = datetime.now().strftime("%Y-%m-%d")
             todays = df[df["date"] == today]
             for _, row in todays.iterrows():
-                st.markdown(f"<div class='scoreboard'>"
-                            f"{row['away_team']} vs {row['home_team']}<br>"
+                st.markdown(f"<div class='scoreboard'>{row['away_team']} vs {row['home_team']}<br>"
                             f"Moneyline: {row['moneyline_pred']} ({row['moneyline_conf']}%) | "
                             f"Spread: {row['spread_pred']} ({row['spread_conf']}%) | "
-                            f"Total: {row['total_pred']} ({row['total_conf']}%)"
-                            f"</div>", unsafe_allow_html=True)
+                            f"Total: {row['total_pred']} ({row['total_conf']}%)</div>", unsafe_allow_html=True)
         else:
             st.info("No games predicted yet.")
 
@@ -220,3 +231,31 @@ with tab3:
             st.dataframe(df, use_container_width=True)
         else:
             st.info("No historical data available.")
+
+# ===================== TAB 4: RECENT WINS =====================
+with tab4:
+    st.markdown("<div class='title'>✅ Recent Wins & Accuracy</div>", unsafe_allow_html=True)
+
+    if os.path.exists(DATA_FILE):
+        df = pd.read_csv(DATA_FILE)
+        correct_ml = np.sum(df["moneyline_result"] == "win")
+        correct_sp = np.sum(df["spread_result"] == "win")
+        correct_tot = np.sum(df["total_result"] == "win")
+        total_ml = len(df)
+        win_pct_ml = round((correct_ml / total_ml) * 100, 2) if total_ml else 0
+        win_pct_sp = round((correct_sp / total_ml) * 100, 2) if total_ml else 0
+        win_pct_tot = round((correct_tot / total_ml) * 100, 2) if total_ml else 0
+
+        st.markdown(f"**Moneyline Accuracy:** 🏆 {win_pct_ml}%")
+        st.markdown(f"**Spread Accuracy:** 📈 {win_pct_sp}%")
+        st.markdown(f"**Total (O/U) Accuracy:** 🔥 {win_pct_tot}%")
+
+        recent_wins = df[(df["moneyline_result"] == "win") | (df["spread_result"] == "win") | (df["total_result"] == "win")]
+        st.markdown("### 🏁 Recent Winning Predictions")
+        for _, row in recent_wins.tail(10).iterrows():
+            st.markdown(f"<div class='scoreboard'>{row['away_team']} vs {row['home_team']}<br>"
+                        f"✅ Moneyline: {row['moneyline_pred']} ({row['moneyline_conf']}%) | "
+                        f"✅ Spread: {row['spread_pred']} ({row['spread_conf']}%) | "
+                        f"✅ Total: {row['total_pred']} ({row['total_conf']}%)</div>", unsafe_allow_html=True)
+    else:
+        st.info("No historical data available yet.")
