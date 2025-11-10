@@ -10,7 +10,7 @@ import random
 # --------------------------
 # CONFIG
 # --------------------------
-st.set_page_config(page_title="🏀 Pat's Picks Premiumim NBA Dashboard", layout="wide")
+st.set_page_config(page_title="🏀 Pat's Picks NBA Dashboard", layout="wide")
 ODDS_API_KEY = "e11d4159145383afd3a188f99489969e"
 ODDS_API_URL = "https://api.the-odds-api.com/v4/sports/basketball_nba/odds"
 DATA_FILE = "predictions.csv"
