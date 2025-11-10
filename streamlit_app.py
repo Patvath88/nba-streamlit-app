@@ -152,7 +152,7 @@ with tab1:
 
     # Heading
     st.markdown(f"<div class='title'>🏀 Top Predictions for {datetime.now(EST).strftime('%m/%d/%Y')}</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtext'>Best AI Monte Carlo picks with sportsbook logos & rankings</div>", unsafe_allow_html=True)
+    st.markdown("<div class='subtext'>Our Top Picks Curated For You to Cash Out!</div>", unsafe_allow_html=True)
 
     # Fetch odds data
     games = fetch_live_odds()
