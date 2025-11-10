@@ -1,9 +1,11 @@
 import streamlit as st
 import requests
 import numpy as np
+import pandas as pd
 from datetime import datetime, timedelta
 import pytz
 import random
+import os
 
 # ====================================
 # Streamlit Config
@@ -25,7 +27,7 @@ TEAM_LOGOS = {
 }
 
 # ====================================
-# UI Helpers
+# Helper Functions
 # ====================================
 def safe_image(url, width=80):
     try:
@@ -74,8 +76,6 @@ def fetch_today_games():
 
     for day in data["leagueSchedule"]["gameDates"]:
         raw_date = day["gameDate"]
-
-        # Fix: accept both date formats
         try:
             game_date = datetime.strptime(raw_date, "%Y-%m-%d").date()
         except ValueError:
@@ -103,7 +103,7 @@ def fetch_today_games():
 # ====================================
 # Player Props
 # ====================================
-def fetch_player_props(game):
+def fetch_player_props():
     props = ["Points", "Rebounds", "Assists", "3PT Made", "Steals+Blocks"]
     results = []
     for p in props:
@@ -131,7 +131,7 @@ else:
     st.subheader("🏀 Today’s NBA Matchups (EST)")
 
 if not games:
-    st.warning("No NBA games found for today or tomorrow. Please check back later.")
+    st.warning("No NBA games found for today or tomorrow.")
 else:
     for g in games:
         home, away = g["home"], g["away"]
@@ -141,29 +141,28 @@ else:
         with col2:
             st.markdown(f"### {away} @ {home}")
             st.markdown(f"**Tip-off:** {g['gameTime']} EST")
-            
+
             # Moneyline
             ml_pred, ml_conf = run_monte_carlo_prediction(random.randint(-150, 150), random.randint(-150, 150))
             st.markdown(f"**Moneyline:** {ml_pred} ({ml_conf}%)")
             st.markdown(confidence_bar(ml_conf), unsafe_allow_html=True)
-            
+
             # Spread
             sp_pred, sp_conf = monte_carlo_prop(g["spread"])
             st.markdown(f"**Spread:** {sp_pred} ({sp_conf}%) — Line: {g['spread']}")
             st.markdown(confidence_bar(sp_conf), unsafe_allow_html=True)
-            
+
             # Total
             tot_pred, tot_conf = monte_carlo_prop(g["total"])
             st.markdown(f"**Total (O/U):** {tot_pred} ({tot_conf}%) — {g['total']}")
             st.markdown(confidence_bar(tot_conf), unsafe_allow_html=True)
-        
+
         with col3:
             safe_image(TEAM_LOGOS.get(home))
-        
-        # Player Props
+
         st.markdown("---")
-        st.markdown("#### 📈 Player Prop Analyzer (AI Monte Carlo Results)")
-        props = fetch_player_props(g)
+        st.markdown("#### 📈 Player Prop Analyzer")
+        props = fetch_player_props()
         for p in props:
             st.markdown(f"**{p['prop']} — {p['prediction']} {p['line']} ({p['confidence']}%)**")
             st.markdown(confidence_bar(p['confidence']), unsafe_allow_html=True)
